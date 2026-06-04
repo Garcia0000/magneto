@@ -2,6 +2,12 @@ export const SITE_CONFIG = {
   youtubeVideoId: 'SOLJwnp2p3M',
   hotmartUrl: '#HOTMART_URL_AQUI',
 
+  // ── TikTok hook video ─────────────────────────────────────────
+  // Pega aquí la URL completa del video de TikTok (no el link corto)
+  // Formato: https://www.tiktok.com/@usuario/video/1234567890
+  tiktokUrl: 'https://vt.tiktok.com/ZSQe45Jpo/',
+  tiktokVideoId: '', // dejar vacío si usas la URL corta
+
   // ── Copia / Copy ──────────────────────────────────────────────
   siteName: 'Magneto',
   pageTitle: 'Lo Que Nadie Te Ha Contado… Hasta Hoy',
