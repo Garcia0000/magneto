@@ -1,0 +1,20 @@
+# Next.js
+.next/
+out/
+build/
+
+# Dependencies
+node_modules/
+
+# Leads data (sensitive)
+data/
+
+# Env
+.env
+.env.local
+.env*.local
+
+# Misc
+.DS_Store
+*.log
+.vercel
