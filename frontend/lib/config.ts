@@ -39,4 +39,19 @@ export const SITE_CONFIG = {
 
   // Opt-in
   optinCTA: 'DESBLOQUEAR ACCESO →',
+
+  // ── VPlayPlayer CTAs ──────────────────────────────────────────
+  videoCTAs: [
+    {
+      triggerAt: 1260,          // segundo 1260 = minuto 21:00
+      text: 'QUIERO ACCESO AHORA →',
+      href: '#HOTMART_URL_AQUI',
+      color: '#FF6B00',
+      hideAfter: 0,             // 0 = permanente
+    },
+  ] as Array<{ triggerAt: number; text: string; href: string; color?: string; hideAfter?: number }>,
+
+  videoAutoplay: true,
+  videoSocialProof: true,
+  videoViewerBase: 234,
 }

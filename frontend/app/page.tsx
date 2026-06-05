@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { SITE_CONFIG } from '@/lib/config'
 import SmartPlayer from '@/components/SmartPlayer'
+import VPlayPlayer from '@/components/VPlayPlayer'
 
 // ── Íconos SVG inline ──────────────────────────────────────────────────────
 
@@ -67,12 +68,7 @@ export default function TikTokPage() {
   const [progress, setProgress] = useState(0)
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const thumbUrl = `https://img.youtube.com/vi/${SITE_CONFIG.youtubeVideoId}/maxresdefault.jpg`
-  const embedUrl =
-    `https://www.youtube.com/embed/${SITE_CONFIG.youtubeVideoId}` +
-    `?autoplay=1&rel=0&modestbranding=1&playsinline=1&color=white`
-
-  // Simulate progress bar after playing
+  // Simulate progress bar after playing (used for non-youtube providers)
   useEffect(() => {
     if (playing) {
       progressRef.current = setInterval(() => {
@@ -96,37 +92,31 @@ export default function TikTokPage() {
   return (
     <div className="fixed inset-0 bg-black overflow-hidden select-none">
 
-      {/* ── VIDEO (background) — SmartPlayer maneja YouTube/VPlay/iframe ── */}
+      {/* ── VIDEO (background) — VPlayPlayer o SmartPlayer ─────────── */}
       <div className="absolute inset-0 z-0">
-        {/* Si es VPlay o iframe, el SmartPlayer maneja todo incluyendo autoplay */}
-        {SITE_CONFIG.videoProvider !== 'youtube' ? (
+        {SITE_CONFIG.videoProvider === 'youtube' ? (
+          /* VPlayPlayer: smart autoplay, CTAs temporizados, tracking */
+          <VPlayPlayer
+            youtubeId={SITE_CONFIG.youtubeVideoId}
+            ctas={SITE_CONFIG.videoCTAs}
+            autoplay={SITE_CONFIG.videoAutoplay}
+            socialProof={SITE_CONFIG.videoSocialProof}
+            viewerBase={SITE_CONFIG.videoViewerBase}
+            trackingName="tiktok-main"
+            color="#FF6B00"
+          />
+        ) : (
+          /* VPlay o iframe: SmartPlayer maneja todo */
           <div className="w-full h-full" onClick={() => setPlaying(true)}>
             <SmartPlayer aspectRatio="9/16" rounded={false} autoplay />
           </div>
-        ) : (
-          // YouTube: thumbnail + tap to play
-          !playing ? (
-            <img
-              src={thumbUrl}
-              alt="video"
-              className="w-full h-full object-cover"
-              onError={e => { (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${SITE_CONFIG.youtubeVideoId}/hqdefault.jpg` }}
-            />
-          ) : (
-            <iframe
-              src={embedUrl}
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          )
         )}
         {/* Dark gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none z-[1]" />
       </div>
 
-      {/* ── TAP TO PLAY (solo YouTube) ──────────────────────────── */}
-      {SITE_CONFIG.videoProvider === 'youtube' && !playing && (
+      {/* ── TAP TO PLAY (solo cuando NO es youtube — VPlayPlayer tiene su propio play) ── */}
+      {SITE_CONFIG.videoProvider !== 'youtube' && !playing && (
         <button
           onClick={() => setPlaying(true)}
           className="absolute inset-0 z-10 flex items-center justify-center"
