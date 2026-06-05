@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { SITE_CONFIG } from '@/lib/config'
+import SmartPlayer from '@/components/SmartPlayer'
 
 // ── Íconos SVG inline ──────────────────────────────────────────────────────
 
@@ -95,31 +96,37 @@ export default function TikTokPage() {
   return (
     <div className="fixed inset-0 bg-black overflow-hidden select-none">
 
-      {/* ── VIDEO (background) ─────────────────────────────────── */}
+      {/* ── VIDEO (background) — SmartPlayer maneja YouTube/VPlay/iframe ── */}
       <div className="absolute inset-0 z-0">
-        {!playing ? (
-          // Thumbnail
-          <img
-            src={thumbUrl}
-            alt="video"
-            className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${SITE_CONFIG.youtubeVideoId}/hqdefault.jpg` }}
-          />
+        {/* Si es VPlay o iframe, el SmartPlayer maneja todo incluyendo autoplay */}
+        {SITE_CONFIG.videoProvider !== 'youtube' ? (
+          <div className="w-full h-full" onClick={() => setPlaying(true)}>
+            <SmartPlayer aspectRatio="9/16" rounded={false} autoplay />
+          </div>
         ) : (
-          // YouTube iframe
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          // YouTube: thumbnail + tap to play
+          !playing ? (
+            <img
+              src={thumbUrl}
+              alt="video"
+              className="w-full h-full object-cover"
+              onError={e => { (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${SITE_CONFIG.youtubeVideoId}/hqdefault.jpg` }}
+            />
+          ) : (
+            <iframe
+              src={embedUrl}
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          )
         )}
-        {/* Dark gradient bottom */}
+        {/* Dark gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
       </div>
 
-      {/* ── TAP TO PLAY overlay ─────────────────────────────────── */}
-      {!playing && (
+      {/* ── TAP TO PLAY (solo YouTube) ──────────────────────────── */}
+      {SITE_CONFIG.videoProvider === 'youtube' && !playing && (
         <button
           onClick={() => setPlaying(true)}
           className="absolute inset-0 z-10 flex items-center justify-center"

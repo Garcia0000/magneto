@@ -1,39 +1,42 @@
 export const SITE_CONFIG = {
+
+  // ── Video ─────────────────────────────────────────────────────
+  //
+  // videoProvider controla cuál player se usa:
+  //   'youtube'  → embed normal de YouTube (gratis, sin analytics)
+  //   'vplay'    → VPlay smart player  (autoplay, CTA en min 21, analytics)
+  //   'iframe'   → cualquier iframe externo (vturb, converteai, wistia…)
+  //
+  videoProvider: 'youtube' as 'youtube' | 'vplay' | 'iframe',
+
+  // YouTube (usado cuando videoProvider = 'youtube')
   youtubeVideoId: 'SOLJwnp2p3M',
-  hotmartUrl: '#HOTMART_URL_AQUI',
+
+  // VPlay (usado cuando videoProvider = 'vplay')
+  // Pega aquí SOLO la URL del src del iframe que te da VPlay.
+  // Ejemplo: https://vplay.com.br/embed/abc123
+  vplayEmbedUrl: '',
+
+  // Iframe genérico (converteai / vturb / wistia / etc.)
+  // Pega aquí la URL completa del src del iframe.
+  iframeEmbedUrl: '',
 
   // ── TikTok hook video ─────────────────────────────────────────
-  // Pega aquí la URL completa del video de TikTok (no el link corto)
-  // Formato: https://www.tiktok.com/@usuario/video/1234567890
   tiktokUrl: 'https://vt.tiktok.com/ZSQe45Jpo/',
-  tiktokVideoId: '', // dejar vacío si usas la URL corta
+  tiktokVideoId: '',
 
-  // ── Copia / Copy ──────────────────────────────────────────────
+  // ── Producto / Oferta ─────────────────────────────────────────
+  hotmartUrl: '#HOTMART_URL_AQUI',
   siteName: 'Magneto',
-  pageTitle: 'Lo Que Nadie Te Ha Contado… Hasta Hoy',
-  metaDescription:
-    'Descubre el sistema exacto que está transformando la vida de personas comunes — sin experiencia previa.',
+  pageTitle: '¿Por qué estos jóvenes están ganando miles con solo 3 comandos de IA?',
+  metaDescription: 'El sistema que está generando resultados reales — sin experiencia previa.',
 
-  heroTagline: '⚠️ ADVERTENCIA: Esta información puede cambiar tu vida',
-  heroHeadline: 'Lo que estás a punto de descubrir ha sido guardado en silencio por años',
-  heroSubheadline:
-    'Y en los próximos minutos vas a entender exactamente por qué muy pocas personas llegan a este punto.',
-
-  optinHeadline: 'Antes de que veas el video, necesito saber a quién se lo muestro',
-  optinSubheadline:
-    'Deja tu nombre y WhatsApp para desbloquear el video completo. No spam. Nunca.',
-  optinCTA: 'DESBLOQUEAR VIDEO AHORA →',
-
-  videoHeadline: 'Mira esto de principio a fin. No te saltes nada.',
-  videoSubheadline:
-    'Este video de {minutos} minutos contiene el mapa completo. Cada segundo importa.',
-
-  ctaHeadline: '¿Listo para dar el siguiente paso?',
-  ctaSubheadline: 'Las personas que actúan hoy tienen una ventaja que los demás no tendrán mañana.',
   ctaButtonText: 'QUIERO ACCESO AHORA →',
   ctaGuarantee: 'Garantía de satisfacción. Sin riesgos.',
 
-  // ── Urgencia ──────────────────────────────────────────────────
-  // Countdown: horas desde ahora que expira la oferta (0 = desactivado)
+  // Countdown en horas (0 = desactivado)
   countdownHours: 24,
+
+  // Opt-in
+  optinCTA: 'DESBLOQUEAR ACCESO →',
 }
