@@ -1,9 +1,22 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const url  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const key  = process.env.SUPABASE_SERVICE_ROLE_KEY!
+let _client: SupabaseClient | null = null
 
-// Server-side client with service role — bypasses RLS, use only in API routes/Server Components
-export const supabase = createClient(url, key, {
-  auth: { persistSession: false },
+function getClient(): SupabaseClient {
+  if (!_client) {
+    _client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } },
+    )
+  }
+  return _client
+}
+
+// Proxy so existing `supabase.from(...)` calls work without any changes.
+// The client is only instantiated at runtime (first call), not at build time.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_, prop: string | symbol) {
+    return Reflect.get(getClient(), prop)
+  },
 })
