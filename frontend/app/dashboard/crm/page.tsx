@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import CloseDealButton from './CloseDealButton'
 
 function Locked() {
   return (
@@ -51,7 +52,7 @@ function intentColor(level: string | null) {
   return { text: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' }
 }
 
-function LeadCard({ lead }: { lead: Lead }) {
+function LeadCard({ lead, showClose }: { lead: Lead; showClose?: boolean }) {
   const ic  = intentColor(lead.intent_level)
   const lvl: Record<string, string> = { hot: 'Caliente', warm: 'Tibio', cold: 'Frío' }
   return (
@@ -77,6 +78,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       <p className="text-[10px] text-gray-700">
         {new Date(lead.ts).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
       </p>
+      {showClose && <CloseDealButton leadId={lead.id} leadName={lead.name ?? 'Lead'}/>}
     </div>
   )
 }
@@ -186,9 +188,9 @@ export default async function CRMPage({
             {/* Intención (hot sessions) */}
             <FunnelColumn col={columns[2]}/>
 
-            {/* Oportunidades (leads with cards) */}
+            {/* Oportunidades (leads with cards + close button) */}
             <FunnelColumn col={columns[3]}>
-              {opps.map(l => <LeadCard key={l.id} lead={l}/>)}
+              {opps.map(l => <LeadCard key={l.id} lead={l} showClose/>)}
             </FunnelColumn>
 
             {/* Ventas */}
