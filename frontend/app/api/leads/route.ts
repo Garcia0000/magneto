@@ -1,31 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { appendFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, contact } = await req.json()
+    const { name, contact, sessionId } = await req.json()
 
     if (!name || !contact) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
     }
 
-    const dataDir = path.join(process.cwd(), 'data')
-    await mkdir(dataDir, { recursive: true })
+    const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+    const ua = req.headers.get('user-agent') ?? ''
 
-    const line = JSON.stringify({
+    let intentScore = 70
+    let intentLvl   = 'hot'
+
+    if (sessionId) {
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('intent_score, intent_level')
+        .eq('id', sessionId)
+        .single()
+
+      if (session) {
+        intentScore = Math.max(session.intent_score, 70)
+      }
+    }
+
+    await supabase.from('leads').insert({
+      session_id:   sessionId ?? null,
       name,
       contact,
-      ip: req.headers.get('x-forwarded-for') ?? 'unknown',
-      ua: req.headers.get('user-agent') ?? '',
-      ts: new Date().toISOString(),
+      intent_score: intentScore,
+      intent_level: intentLvl,
+      stage:        'oportunidad',
+      ip,
+      ua,
     })
 
-    await appendFile(path.join(dataDir, 'leads.jsonl'), line + '\n', 'utf8')
+    if (sessionId) {
+      await supabase
+        .from('sessions')
+        .update({ intent_score: intentScore, intent_level: 'hot', updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+    }
 
     return NextResponse.json({ ok: true })
   } catch {
-    // Don't expose internal errors
     return NextResponse.json({ ok: true })
   }
 }

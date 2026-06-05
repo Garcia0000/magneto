@@ -27,11 +27,28 @@ interface VPlayPlayerProps {
 
 async function postTrack(payload: Record<string, unknown>) {
   try {
+    const sid = sessionStorage.getItem('_msid')
     await fetch('/api/track', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, sessionId: sid }),
     })
+  } catch {
+    // silent
+  }
+}
+
+async function initSession() {
+  try {
+    if (sessionStorage.getItem('_msid')) return
+    const source = new URLSearchParams(window.location.search).get('utm_source') ?? 'direct'
+    const res  = await fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source }),
+    })
+    const { sessionId } = await res.json()
+    if (sessionId) sessionStorage.setItem('_msid', sessionId)
   } catch {
     // silent
   }
@@ -51,34 +68,47 @@ export default function VPlayPlayer({
 }: VPlayPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(false)
-  const [elapsed, setElapsed] = useState(0)          // fake timer seconds
+  const [elapsed, setElapsed] = useState(0)
   const [viewers, setViewers] = useState(viewerBase)
   const [activeCtas, setActiveCtas] = useState<Set<number>>(new Set())
   const [hiddenCtas, setHiddenCtas] = useState<Set<number>>(new Set())
 
-  // Progress bar: fills in 33 minutes (1980 seconds)
   const TOTAL_SECONDS = 1980
   const progressPct = Math.min((elapsed / TOTAL_SECONDS) * 100, 100)
 
-  const thumbUrl = thumbnail
-    ?? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+  const thumbUrl = thumbnail ?? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+  const embedUrl = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&color=white`
 
-  const embedUrl =
-    `https://www.youtube.com/embed/${youtubeId}` +
-    `?autoplay=1&rel=0&modestbranding=1&playsinline=1&color=white`
+  // Watch depth milestones already fired this session
+  const firedMilestones = useRef<Set<number>>(new Set())
+  const MILESTONES = [10, 25, 50, 75, 90, 100]
+
+  // ── Init session on mount ─────────────────────────────────────────────────
+  useEffect(() => {
+    initSession()
+  }, [])
+
+  // ── Tab visibility tracking ───────────────────────────────────────────────
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!playing) return
+      postTrack({
+        event: document.hidden ? 'tab_blur' : 'tab_focus',
+        player: trackingName,
+        secondsWatched: elapsed,
+      })
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [playing, elapsed, trackingName])
 
   // ── IntersectionObserver for smart autoplay ───────────────────────────────
   useEffect(() => {
     if (!autoplay) return
     const el = containerRef.current
     if (!el) return
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !playing) {
-          handlePlay()
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting && !playing) handlePlay() },
       { threshold: 0.5 }
     )
     observer.observe(el)
@@ -92,6 +122,19 @@ export default function VPlayPlayer({
     const id = setInterval(() => setElapsed(s => s + 1), 1000)
     return () => clearInterval(id)
   }, [playing])
+
+  // ── Watch depth milestones ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!playing) return
+    const pct = Math.floor((elapsed / TOTAL_SECONDS) * 100)
+    for (const milestone of MILESTONES) {
+      if (pct >= milestone && !firedMilestones.current.has(milestone)) {
+        firedMilestones.current.add(milestone)
+        postTrack({ event: 'watch_depth', player: trackingName, watchPct: milestone, secondsWatched: elapsed })
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed, playing])
 
   // ── Social proof fluctuation ─────────────────────────────────────────────
   useEffect(() => {
@@ -108,13 +151,8 @@ export default function VPlayPlayer({
     ctas.forEach((cta, idx) => {
       if (!activeCtas.has(idx) && elapsed >= cta.triggerAt) {
         setActiveCtas(prev => new Set(prev).add(idx))
-
-        // Schedule hide
         if (cta.hideAfter && cta.hideAfter > 0) {
-          const delay = cta.hideAfter * 1000
-          setTimeout(() => {
-            setHiddenCtas(prev => new Set(prev).add(idx))
-          }, delay)
+          setTimeout(() => setHiddenCtas(prev => new Set(prev).add(idx)), cta.hideAfter * 1000)
         }
       }
     })
@@ -124,17 +162,10 @@ export default function VPlayPlayer({
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-
     const noCtxMenu = (e: MouseEvent) => e.preventDefault()
     const noKeys = (e: KeyboardEvent) => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === 's' || e.key === 'u' || e.key === 'S' || e.key === 'U')
-      ) {
-        e.preventDefault()
-      }
+      if ((e.ctrlKey || e.metaKey) && ['s','u','S','U'].includes(e.key)) e.preventDefault()
     }
-
     el.addEventListener('contextmenu', noCtxMenu)
     document.addEventListener('keydown', noKeys)
     return () => {
@@ -156,12 +187,7 @@ export default function VPlayPlayer({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 overflow-hidden select-none"
-      style={{ userSelect: 'none' }}
-    >
-      {/* Video or Thumbnail */}
+    <div ref={containerRef} className="absolute inset-0 overflow-hidden select-none" style={{ userSelect: 'none' }}>
       {playing ? (
         <iframe
           src={embedUrl}
@@ -177,18 +203,11 @@ export default function VPlayPlayer({
             className="absolute inset-0 w-full h-full object-cover"
             draggable={false}
             onError={e => {
-              ;(e.target as HTMLImageElement).src =
-                `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
+              ;(e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
             }}
           />
-          {/* Dark overlay on thumbnail */}
           <div className="absolute inset-0 bg-black/40" />
-          {/* Play button */}
-          <button
-            onClick={handlePlay}
-            className="absolute inset-0 flex items-center justify-center"
-            aria-label="Reproducir"
-          >
+          <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center" aria-label="Reproducir">
             <div
               className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110"
               style={{ background: color }}
@@ -201,46 +220,33 @@ export default function VPlayPlayer({
         </>
       )}
 
-      {/* Dark gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
-      {/* Progress bar (fake, 33 min) */}
+      {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20 pointer-events-none">
-        <div
-          className="h-full transition-none"
-          style={{ width: `${progressPct}%`, background: color }}
-        />
+        <div className="h-full transition-none" style={{ width: `${progressPct}%`, background: color }} />
       </div>
 
       {/* Social proof badge */}
       {socialProof && playing && (
         <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 pointer-events-none">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-white text-xs font-semibold">
-            {viewers.toLocaleString()} pessoas assistindo agora
-          </span>
+          <span className="text-white text-xs font-semibold">{viewers.toLocaleString()} pessoas assistindo agora</span>
         </div>
       )}
 
       {/* CTAs */}
       {ctas.map((cta, idx) => {
-        const visible = activeCtas.has(idx) && !hiddenCtas.has(idx)
-        if (!visible) return null
+        if (!activeCtas.has(idx) || hiddenCtas.has(idx)) return null
         return (
-          <div
-            key={idx}
-            className="absolute bottom-6 left-4 right-4 z-20 animate-[fadeUp_0.5s_ease-out_forwards]"
-          >
+          <div key={idx} className="absolute bottom-6 left-4 right-4 z-20 animate-[fadeUp_0.5s_ease-out_forwards]">
             <a
               href={cta.href}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => handleCtaClick(cta)}
               className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-white text-base shadow-2xl tracking-wide"
-              style={{
-                background: cta.color ?? color,
-                boxShadow: `0 4px 24px ${(cta.color ?? color)}66`,
-              }}
+              style={{ background: cta.color ?? color, boxShadow: `0 4px 24px ${(cta.color ?? color)}66` }}
             >
               {cta.text}
             </a>

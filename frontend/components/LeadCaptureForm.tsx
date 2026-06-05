@@ -23,10 +23,11 @@ export default function LeadCaptureForm({ onSuccess }: Props) {
     setLoading(true)
 
     try {
+      const sessionId = typeof window !== 'undefined' ? sessionStorage.getItem('_msid') : null
       await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), contact: contact.trim() }),
+        body: JSON.stringify({ name: name.trim(), contact: contact.trim(), sessionId }),
       })
     } catch {
       // silently continue — don't block user flow on network errors
